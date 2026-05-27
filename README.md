@@ -14,10 +14,10 @@ With the help of Google Gemini, I have built an alpha module for Magisk/KernelSU
 
 # Limitations
 
-• *Requires root*: This module only works if you have rooted your Android device using a method that supports Magisk modules. It seems just barely possible to even do what I've just accomplished with root, let alone without it...
+- **Requires root**: This module only works if you have rooted your Android device using a method that supports Magisk modules. It seems just barely possible to even do what I've just accomplished with root, let alone without it...
 
-• Currently, only one folder labeled "Wormhole" is created at /storage/0/ using this module, across any existing users on the device. This folder serves as a Wormhole between each userspace and there is currently no option to move it or add additional wormholes, though this is not particularly difficult to do. I just don't want to deal with learning how to create a working UI for this, so I won't waste my time for now unless these features are requested.
+- Currently, only one folder labeled "Wormhole" is created at /storage/0/ using this module, across any existing users on the device. This folder serves as a Wormhole between each userspace and there is currently no option to move it or add additional wormholes, though this is not particularly difficult to do. I just don't want to deal with learning how to create a working UI for this, so I won't waste my time for now unless these features are requested.
 
-• There may be some slight synchronization issues occasionally. I've optimized this to the best of my understanding, but further optimization may be looked into.
+- There may be some slight synchronization issues occasionally. I've optimized this to the best of my understanding, but further optimization may be looked into.
 
-• I don't have a clue what version of Android this doesn't work for, and so on. Tested on Pixel 8a running stock Android 16. It may or may not work, use at your own risk I guess...
+- I don't have a clue what version of Android this doesn't work for, and so on. Tested on Pixel 8a running stock Android 16. It may or may not work, use at your own risk I guess...
