@@ -1,4 +1,4 @@
-# android-wormhole-module
+# Android Wormhole™
 Create a file system Wormhole between Android users!
 
 Have you ever wanted to bring files from one userspace to another on Android? Now you can!
