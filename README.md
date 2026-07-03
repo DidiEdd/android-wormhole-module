@@ -26,4 +26,6 @@ The Android Wormhole™ Module works by creating a Wormhole folder in each users
 
 - Due to an encrypted boot state, the Wormhole may have a delay in displaying the files upon first unlock of any given user. After the first unlock, Wormhole transfers are pretty much instant.
 
+- This module cannot work with users that have extreme power saving or similar power saving modes enabled.
+
 - I don't have a clue what version of Android this doesn't work for, and so on. Tested on Pixel 8a running stock Android 16. It may or may not work, use at your own risk I guess...
