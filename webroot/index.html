@@ -1,1 +1,115 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wormhole</title>
+<style>
+:root{--bg:#f4f2fa;--card:#fff;--ink:#1c1930;--mut:#6a6685;--line:#e3dff0;--v:#5b3df5;--a:#e8962a;--ok:#14916b;--bad:#cf3f57;color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#131021;--card:#1d1a30;--ink:#ece9fa;--mut:#a39fbd;--line:#2d2946;--v:#9b86ff;--a:#f5b552;--ok:#43c49a;--bad:#ff7d92}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Google Sans Text","Product Sans",Roboto,system-ui,sans-serif;padding:env(safe-area-inset-top) 0 calc(24px + env(safe-area-inset-bottom))}
+main{max-width:640px;margin:0 auto;padding:0 16px}
+header{display:flex;align-items:center;gap:14px;padding:22px 0 14px}
+.ring{width:46px;height:46px;flex:none;border-radius:50%;background:conic-gradient(from 20deg,var(--v),var(--a),var(--v));-webkit-mask:radial-gradient(circle,transparent 44%,#000 47%);mask:radial-gradient(circle,transparent 44%,#000 47%);animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(1turn)}}@media(prefers-reduced-motion:reduce){.ring{animation:none}}
+h1{font-size:26px;font-weight:650;letter-spacing:-.4px;margin:0}header p{margin:0;color:var(--mut);font-size:13px}
+header>div{flex:1}
+h2{font-size:15px;font-weight:650;margin:26px 2px 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-top:1px solid var(--line)}.row:first-child{border-top:0}
+.row>div{flex:1;min-width:0}.row b{font-weight:550;display:block}.row small{color:var(--mut);display:block;font-size:12.5px;margin-top:2px}
+.pill{font-size:12px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);color:var(--mut);white-space:nowrap}
+.pill.ok{color:var(--ok);border-color:currentColor}.pill.cur{color:var(--v);border-color:currentColor}.pill.bad{color:var(--bad);border-color:currentColor}
+input[type=text],input[type=number],select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:7px 9px;max-width:50%;min-width:90px;text-align:right}
+input[type=text].w{max-width:55%}
+.sw{appearance:none;width:44px;height:26px;border-radius:99px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw:checked{background:var(--v)}.sw:checked::after{transform:translateX(18px)}
+:focus-visible{outline:2px solid var(--v);outline-offset:2px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button{font:inherit;font-weight:550;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 16px}
+button.p{background:var(--v);border-color:var(--v);color:#fff}button:active{opacity:.7}
+pre{margin:0;padding:12px 14px;font:12px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow:auto;color:var(--mut)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%}
+#toast.on{opacity:1}.empty{padding:16px 14px;color:var(--mut)}
+</style></head>
+<body><main>
+<header><div class="ring"></div><div><h1>Wormhole</h1><p id="sub">Connecting…</p></div>
+<input id="master" class="sw" type="checkbox" aria-label="Wormhole active"></header>
 
+<h2>Users</h2><div class="card" id="users"><div class="empty">Loading…</div></div>
+<div class="btns" style="margin-top:10px">
+ <button class="p" data-act="sync">Sync now</button>
+ <button data-act="repair">Repair permissions</button>
+ <button data-act="restart">Restart service</button>
+</div>
+<div id="settings"></div>
+
+<h2>Log and diagnostics</h2>
+<div class="btns" style="margin-bottom:8px"><button data-act="log">Show log</button><button data-act="diag">Run diagnostics</button></div>
+<div class="card"><pre id="out">Nothing to show yet.</pre></div>
+<div id="toast" role="status"></div>
+</main>
+<script>
+const MOD='/data/adb/modules/android_wormhole',$=s=>document.querySelector(s);
+let cfg={},users=[],cur='0';
+function sh(a){return new Promise((ok,no)=>{
+  if(!window.ksu)return no(new Error('Open this page from the module list in APatch'));
+  const cb='cb'+Date.now()+Math.floor(Math.random()*1e6);
+  window[cb]=(c,o,e)=>{delete window[cb];ok({code:c,out:(o||'').trim(),err:(e||'').trim()})};
+  try{ksu.exec('sh '+MOD+'/wormhole.sh '+a,'{}',cb)}catch(x){delete window[cb];no(x)}})}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2200)}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function save(k,v){v=String(v).replace(/'/g,'');const r=await sh(`set ${k} '${v}'`).catch(e=>({out:e.message}));
+  if(r.out==='ok'){cfg[k]=v;toast('Saved')}else{toast(r.out||'Could not save');load()}}
+const S=[
+{t:'General',i:[
+ {k:'INTERVAL',l:'Check every',y:'num',u:'s',h:'Lower reacts faster after a user switch. Higher saves a little battery.'},
+ {k:'WORMHOLES',l:'Folder names',y:'txt',h:'Folders in each user’s storage root, separated by spaces. Each one is its own wormhole.'},
+ {k:'EXCLUDE_PROFILES',l:'Skip work and private profiles',y:'sw',h:'Keeps files from flowing into profiles such as Private Space.'}]},
+{t:'Sharing and permissions',i:[
+ {k:'NORMALIZE',l:'Any user can move and delete files',y:'sw',h:'On: arriving files are re-owned and get shared permissions. Off: files keep the owner they were created with, so only that owner can change them.'},
+ {k:'FIX_SELINUX',l:'Reset SELinux labels on arrival',y:'sw',h:'Clears labels that stop other users from editing files. Turn on if deleting still fails.'},
+ {k:'DIR_MODE',l:'Folder permissions',y:'txt',w:0,h:'Octal. Default 0775.'},
+ {k:'FILE_MODE',l:'File permissions',y:'txt',w:0,h:'Octal. Default 0664.'}]},
+{t:'When names collide',i:[
+ {k:'ON_CONFLICT',l:'If a file already exists',y:'sel',o:[['rename','Keep both'],['newer','Keep the newer'],['skip','Leave it behind'],['overwrite','Replace it']]}]},
+{t:'Folder behaviour',i:[
+ {k:'NOMEDIA',l:'Hide from Gallery and media apps',y:'sw'},
+ {k:'MEDIA_SCAN',l:'Refresh media index after a transfer',y:'sw',h:'Helps files show up right away in each user’s file manager.'},
+ {k:'SETTLE',l:'Wait for new files to settle',y:'num',u:'s',h:'Avoids moving a file that is still being copied.'},
+ {k:'CLEAN_DAYS',l:'Auto-delete files older than',y:'num',u:'days',h:'0 means never. Deleted files are not recoverable.'},
+ {k:'NOTIFY',l:'Notify when files arrive',y:'sw',h:'Best effort. Shows on the main user only.'}]},
+{t:'Logging',i:[{k:'LOG_KB',l:'Maximum log size',y:'num',u:'KB'}]}];
+function ctl(it){const v=cfg[it.k]??'',k=it.k;
+ if(it.y==='sw')return `<input class="sw" type="checkbox" data-k="${k}" ${v==='1'?'checked':''} aria-label="${esc(it.l)}">`;
+ if(it.y==='sel')return `<select data-k="${k}">${it.o.map(o=>`<option value="${o[0]}" ${o[0]===v?'selected':''}>${o[1]}</option>`).join('')}</select>`;
+ if(it.y==='num')return `<input type="number" inputmode="numeric" min="0" data-k="${k}" value="${esc(v)}">${it.u?`<span class="pill">${it.u}</span>`:''}`;
+ return `<input type="text" class="${it.w===0?'':'w'}" data-k="${k}" value="${esc(v)}" autocapitalize="off" spellcheck="false">`}
+function render(){
+ $('#settings').innerHTML=S.map(s=>`<h2>${s.t}</h2><div class="card">${s.i.map(it=>`<div class="row"><div><b>${it.l}</b>${it.h?`<small>${it.h}</small>`:''}</div>${ctl(it)}</div>`).join('')}</div>`).join('');
+ $('#master').checked=cfg.ENABLED==='1';
+ const ex=(cfg.EXCLUDE_USERS||'').split(' ');
+ $('#users').innerHTML=users.length?users.map(u=>{
+  const prof=(parseInt(u.fl,16)&0x1000)!==0,size=u.s>1024?(u.s/1024).toFixed(1)+' MB':u.s+' KB';
+  return `<div class="row"><div><b>${esc(u.n||'User')} <span class="pill">id ${u.id}</span></b><small>${u.l?`${u.c} item${u.c==1?'':'s'} · ${size}`:'Storage locked until this user is unlocked'}</small></div>
+  ${u.id===cur?'<span class="pill cur">active</span>':''}${prof?'<span class="pill">profile</span>':''}<span class="pill ${u.l?'ok':'bad'}">${u.l?'unlocked':'locked'}</span>
+  <input class="sw" type="checkbox" data-user="${u.id}" ${ex.includes(u.id)?'':'checked'} aria-label="Include user ${u.id}"></div>`}).join(''):'<div class="empty">No users found.</div>'}
+async function load(){
+ try{const [c,s]=await Promise.all([sh('get'),sh('status')]);
+  cfg={};c.out.split('\n').forEach(l=>{const i=l.indexOf('=');if(i>0)cfg[l.slice(0,i)]=l.slice(i+1).replace(/^"|"$/g,'')});
+  users=[];let run=0;s.out.split('\n').forEach(l=>{const i=l.indexOf('=');if(i<1)return;const k=l.slice(0,i),v=l.slice(i+1);
+   if(k==='daemon')run=+v;else if(k==='current')cur=v;else if(k==='user'){const p=v.split('|');users.push({id:p[0],n:p[1],l:p[2]==='1',fl:p[3],c:+p[4],s:+p[5]})}
+   else if(k==='version')$('#sub').dataset.v=v});
+  $('#sub').textContent=(run?'Service running':'Service stopped')+' · '+($('#sub').dataset.v||'');
+  render()}catch(e){$('#sub').textContent=e.message;$('#users').innerHTML='<div class="empty">'+esc(e.message)+'</div>'}}
+document.addEventListener('change',e=>{const t=e.target;
+ if(t.id==='master')return save('ENABLED',t.checked?1:0);
+ if(t.dataset.user){const ex=new Set((cfg.EXCLUDE_USERS||'').split(' ').filter(Boolean));t.checked?ex.delete(t.dataset.user):ex.add(t.dataset.user);return save('EXCLUDE_USERS',[...ex].join(' '))}
+ if(t.dataset.k)save(t.dataset.k,t.type==='checkbox'?(t.checked?1:0):t.value.trim())});
+document.addEventListener('click',async e=>{const a=e.target.dataset?.act;if(!a)return;
+ if(a==='repair'&&!confirm('Reset owner, permissions and SELinux labels for everything in the wormhole folders?'))return;
+ const b=e.target;b.disabled=true;
+ try{const r=await sh(a==='log'?'log 120':a);
+  if(a==='log'||a==='diag')$('#out').textContent=r.out||'(empty)';else toast(r.out==='busy'?'Busy, try again':r.out||'Done');
+  if(a!=='log'&&a!=='diag')setTimeout(load,600)}catch(x){toast(x.message)}b.disabled=false});
+load();
+</script></body></html>
